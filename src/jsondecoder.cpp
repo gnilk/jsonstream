@@ -51,10 +51,7 @@ using namespace gnilk;
 JSONDecoder::JSONDecoder(IReader *pStream, IUnmarshal *pRootObject) :
     ss(pStream),
     rootObject(pRootObject) {
-
     relaxed = false;
-
-
 }
 
 JSONDecoder::~JSONDecoder() {
