@@ -15,7 +15,6 @@ JSONDecoderNew::~JSONDecoderNew() {
 
 }
 
-// NOTE: Nested object/unmarshalling not tested...
 bool JSONDecoderNew::ProcessData(bool relax /*= false*/) {
     int ch;
     memset(objectCurrent, 0, szLabel);
@@ -28,6 +27,9 @@ bool JSONDecoderNew::ProcessData(bool relax /*= false*/) {
                 if (ch == '{') {
                     PushArrayState(false);
                     ChangeState(kObjectStart);
+                } else if (ch == '[') {
+                    PushArrayState(true);
+                    ChangeState(kValueStart);
                 }
                 break;
             case kObjectStart :
@@ -82,11 +84,15 @@ bool JSONDecoderNew::ProcessData(bool relax /*= false*/) {
                     PushArrayState(true);
                     // Stays in state...
 
+                } else if (((ch == ',')  || (ch == '}') || (ch ==']')) && (!relax)) {
+                    // bla
+                    return Error(ch);
                 } else if (!std::isspace(ch)) {
                     valueCurrent[idxValueCurrent++] = ch;
                     valueCurrent[idxValueCurrent] = '\0';
                     ChangeState(kValue);
                 }
+
                 break;
             case kValue :
                 if (ch == ',') {
@@ -102,24 +108,24 @@ bool JSONDecoderNew::ProcessData(bool relax /*= false*/) {
                     OnValue();
                     PopArrayState();
                     PopObject();
-                    ChangeState(kEndOrNext);
+                    inArray?ChangeState(kEndArrayOrNext):ChangeState(kEndOrNext);
                 } else if (ch == '}') {
                     OnValue();
                     PopObject();
                     PopArrayState();
-                    ChangeState(kEndArrayOrNext);
+                    inArray?ChangeState(kEndArrayOrNext):ChangeState(kEndOrNext);
                 } else if (!std::isspace(ch)) {
                     valueCurrent[idxValueCurrent++] = ch;
                     valueCurrent[idxValueCurrent] = '\0';
                 } else {
                     OnValue();
-                    ChangeState(kEndOrNext);
+                    inArray?ChangeState(kEndArrayOrNext):ChangeState(kEndOrNext);
                 }
                 break;
             case kValueString :
                 if (ch == '\"') {
                     OnValue();
-                    ChangeState(kEndOrNext);
+                    inArray?ChangeState(kEndArrayOrNext):ChangeState(kEndOrNext);
                 } else {
                     valueCurrent[idxValueCurrent++] = ch;
                     valueCurrent[idxValueCurrent] = '\0';
@@ -145,7 +151,7 @@ bool JSONDecoderNew::ProcessData(bool relax /*= false*/) {
                         std::string dummy = objectCurrent;
                         pCurrentObject->PushToArray(dummy, pPreviousObject);
                     }
-                    ChangeState(kConsume);
+                    ChangeState(kEndOrNext);
                 } else if (!std::isspace(ch) ){
                     return Error(ch);
                 }
@@ -156,12 +162,7 @@ bool JSONDecoderNew::ProcessData(bool relax /*= false*/) {
                 } else if (ch == '}') {
                     PopObject();
                     PopArrayState();
-                    if (inArray) {
-                        //printf("kEndOrNext - In array\n");
-                        ChangeState(kEndArrayOrNext);
-                    } else {
-                        ChangeState(kConsume);
-                    }
+                    inArray?ChangeState(kEndArrayOrNext):ChangeState(kEndOrNext);
                 } else if (!std::isspace(ch)) {
                     return Error(ch);
                 }
