@@ -44,6 +44,17 @@ namespace gnilk {
      */
     class JSONDecoder {
     public:
+        /**
+         * @brief Value callback definition
+         *
+         * You need to implement a function with this signature in order to use the callback mechanism
+         * For the 'ROOT' object, the length of 'object' is 0.
+         *
+         * @param object name of currently parsed object or list
+         * @param name name of value
+         * @param value the value it self (always as a string, you need to know if this is a number or not)
+         *
+         */
         using ValueDelegate = std::function<void(const char *object, const char *name, const char *value)>;
     public:
 
