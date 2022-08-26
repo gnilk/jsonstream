@@ -5,11 +5,18 @@
 using namespace gnilk;
 
 bool t_jsnew_basic() {
-    std::string basic = "{ \"number\" : 10 }";
+    std::string basic = "{ \"number\" : 10, \"myobject\" : { \"str\" : \"this is a string\" } }";
     Memfile mf(basic);
-    JSONDecoder jsNew(&mf,nullptr);
-    jsNew.ProcessData();
-    return true;
+    auto callback = [](const char *object, const char *label, const char *value) {
+        if (strlen(object) > 0) {
+            printf("%s : %s = '%s'\n", object, label, value);
+        } else {
+            printf("ROOT: '%s' = '%s'\n", label, value);
+        }
+    };
+
+    JSONDecoder jsNew(&mf,callback);
+    return jsNew.ProcessData();
 }
 
 int main(int argc, char **argv) {
