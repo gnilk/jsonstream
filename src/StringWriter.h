@@ -12,7 +12,7 @@
 #include <string>
 
 
-#include "encoding.h"
+#include "Encoding.h"
 
 
 namespace gnilk {

@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 #include <vector>
-#include "encoding.h"
+#include "Encoding.h"
 
 namespace gnilk {
     // Put these somewhere...

@@ -8,15 +8,15 @@
 #include <vector>
 #include <string>
 #include <cstdint>
-#include "encoding.h"
+#include "Encoding.h"
 namespace gnilk {
     // NOTE: DOES NOT SUPPORT SEEK!!!!
     class Memfile : public IReader, public IWriter {
     public:
         Memfile(const std::string &input) {
             // Lousy...
-            for (int i = 0; i < input.size(); i++) {
-                data.push_back(input[i]);
+            for (auto ch : input) {
+                data.push_back(ch);
             }
         }
 
@@ -33,7 +33,7 @@ namespace gnilk {
                 return 0;
             }
 
-            int nRead = 0;
+            size_t nRead = 0;
             while (nRead < szData) {
                 buffer[nRead] = data[rpos];
                 nRead++;
@@ -46,7 +46,7 @@ namespace gnilk {
         }
 
         // Returns the next byte available or negative on error
-        int Peek() override {
+        int Peek() {
             return data[rpos];
         }
 
@@ -65,7 +65,7 @@ namespace gnilk {
         }
 
     private:
-        int rpos = 0;
+        size_t rpos = 0;
         std::vector<uint8_t> data;
     };
 

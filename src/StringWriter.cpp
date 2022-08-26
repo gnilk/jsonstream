@@ -3,7 +3,7 @@
 //
 
 #include <assert.h>
-#include "encoding.h"
+#include "Encoding.h"
 #include "StringWriter.h"
 //#include <assert.h>
 

@@ -1,11 +1,13 @@
-## JSON Streaming Parser
+# JSON Streaming Parser
 
-This repository includes two JSON decoders and one JSON encoder.
-The old (jsonencoder/jsondecoder) are taken from another project.
+This is a zero allocation JSON Streaming Parser.
+Mainly intended for embedded use.
 
 Should build on any modern CPP compiler - no fancy stuff being used.
 
-### JSONDecoderNew.cpp
+In order to run the unit tests you need https://github.com/gnilk/testrunner
+
+## JSONDecoder.cpp
 Implements a very rudimentary and minimalstic JSON parser in C/CPP.
 * No allocations
 * I/O through interface implementation
@@ -15,10 +17,20 @@ Implements a very rudimentary and minimalstic JSON parser in C/CPP.
 Buffers are defined at compile time. Default values are 64bytes for any label
 or string. 
 
-### jsondecoder.cpp
-A more robust parser which uses little memory but still does allocations.
-Objects/Values are passed directly to the IUnmarshal interface. A local copy of
-all traversed objects are kept in the parser until you dispose it.
-
-### jsonencoder.cpp
+## JSONEncoder.cpp
 Encoding of objects and similar. This is currently not functional (depends on commented out code in encoding.h)
+
+## Support interfaces
+### IReader
+Defines two functions
+- Read, reads a bunch of bytes from the underlying data stream
+- Available, checks if more data is available
+
+See the VectorReader or Memfile for an example..
+
+### IUnmarshal
+Defines a small interface in order to map the parsed data to the CPP data model
+
+See the unit tests for an example
+
+

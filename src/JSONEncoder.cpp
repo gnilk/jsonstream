@@ -22,8 +22,8 @@ TODO: [ -:Not done, +:In progress, !:Completed]
 #include <stdint.h>
 #include <stdio.h>
 
-#include "encoding.h"
-#include "jsonencoder.h"
+#include "Encoding.h"
+#include "JSONEncoder.h"
 
 
 using namespace gnilk;

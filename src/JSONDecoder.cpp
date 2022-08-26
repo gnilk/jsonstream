@@ -3,19 +3,34 @@
 // allocation free...
 //
 
-#include "JSONDecoderNew.h"
+#include "JSONDecoder.h"
 
 using namespace gnilk;
 
-JSONDecoderNew::JSONDecoderNew(IReader *pStream, IUnmarshal *pRootObject) : inStream(pStream), pCurrentObject(pRootObject) {
+#ifdef DEBUG
+static void errx(const char *file, size_t line, const char *msg) {
+    printf("ERR: %s @ %d - %s\n",file, line, msg);
+    exit(1);
+}
+#else
+// Just here in case we/you want something different in release mode..
+static void errx(const char *file, size_t line, const char *msg) {
+    printf("ERR: %s @ %d - %s\n",file, (int)line, msg);
+    exit(1);
+}
+#endif
+
+JSONDecoder::JSONDecoder(IReader *pStream, IUnmarshal *pRootObject) : inStream(pStream), pCurrentObject(pRootObject) {
 
 }
 
-JSONDecoderNew::~JSONDecoderNew() {
+JSONDecoder::JSONDecoder(IReader *pStream, ValueDelegate valueDelegate) : inStream(pStream), cbValue(valueDelegate) {
 
 }
 
-bool JSONDecoderNew::ProcessData(bool relax /*= false*/) {
+
+// NOTE: Nested object/unmarshalling not tested...
+bool JSONDecoder::ProcessData(bool relax /*= false*/) {
     int ch;
     memset(objectCurrent, 0, szLabel);
     PushObject(pCurrentObject);
@@ -172,22 +187,32 @@ bool JSONDecoderNew::ProcessData(bool relax /*= false*/) {
 }
 
 // Private
-bool JSONDecoderNew::NewObjectFromLabel(const char *label) {
+bool JSONDecoder::NewObjectFromLabel(const char *label) {
     if (pCurrentObject == nullptr) {
         return true;
     }
     auto strObjectName = std::string(label);
     auto newObject = pCurrentObject->GetUnmarshalForField(strObjectName);
-    if (newObject == nullptr) {
+
+    // Special case for first object, we allow it to be same as current..
+    // This allows for the following to be treat in the same way..
+    // "{ \"Object\" : { \"Field\" : 1 } }"   ==    "{ \"Field\" : 1 }"
+    //
+    //  Side effect, this would override field with '2':
+    // { "Field" : 4, "Object" : { "Field" : 2 } }
+    //
+    if ((newObject == nullptr) && (idxObjectStack == 1)) {
+        //printf("[Warning] reusing root object for first level umarshalling of '%s'\n", label);
+        newObject = pCurrentObject;
+    } else {
         //printf("[Warning] No unmarshalling for '%s'\n", label);
     }
     return PushObject(newObject);
 }
 
-void JSONDecoderNew::PushArrayState(bool newArrayState) {
+void JSONDecoder::PushArrayState(bool newArrayState) {
     if (idxInArrayState >= (szObjectStack-1)) {
-        printf("[ERROR] Array State stack exhausted, increase size\n");
-        exit(1);
+        errx(__FILE__,__LINE__, "Array State stack exhausted, increase size");
     }
     //printf("Push ArrayState: %d, %s\n", idxInArrayState, newArrayState?"true":"false");
 //    if (newArrayState) {
@@ -198,31 +223,28 @@ void JSONDecoderNew::PushArrayState(bool newArrayState) {
     idxInArrayState++;
 }
 
-bool JSONDecoderNew::PopArrayState() {
+bool JSONDecoder::PopArrayState() {
     if (idxInArrayState == 0) {
-        printf("[ERROR] Array state stack underflow\n");
-        exit(1);
+        errx(__FILE__, __LINE__, "[ERROR] Array state stack underflow\n");
     }
     idxInArrayState--;
     if (idxInArrayState > 0) {
         inArray = inArrayStateStack[idxInArrayState-1];
     }
-    //printf("Pop ArrayState: %d, %s\n", idxInArrayState, inArray?"true":"false");
 
     return inArray;
 }
 
-bool JSONDecoderNew::PushObject(IUnmarshal *pObject) {
+bool JSONDecoder::PushObject(IUnmarshal *pObject) {
     if (idxObjectStack >= (szObjectStack-1)) {
-        printf("[ERROR] Object stack exhausted, increase size!\n");
-        return false;
+        errx(__FILE__, __LINE__, "[ERROR] Object stack exhausted, increase size!\n");
     }
     objectStack[idxObjectStack] = pObject;
     pCurrentObject= pObject;
     idxObjectStack++;
     return true;
 }
-IUnmarshal *JSONDecoderNew::PopObject() {
+IUnmarshal *JSONDecoder::PopObject() {
     idxObjectStack--;
     if (idxObjectStack > 0) {
         pPreviousObject = pCurrentObject;
@@ -231,9 +253,9 @@ IUnmarshal *JSONDecoderNew::PopObject() {
     return pCurrentObject;
 }
 
-void JSONDecoderNew::OnValue() {
+void JSONDecoder::OnValue() {
     if ((cbValue == nullptr) && (pCurrentObject == nullptr)) {
-        printf("Value: '%s' = '%s'\n", labelCurrent, valueCurrent);
+        //printf("Value: '%s' = '%s'\n", labelCurrent, valueCurrent);
     } else {
         if (pCurrentObject != nullptr) {
             auto strLabel = std::string(labelCurrent);
@@ -251,17 +273,31 @@ void JSONDecoderNew::OnValue() {
 }
 
 // private
-bool JSONDecoderNew::Error(int chCurrent) {
+bool JSONDecoder::Error(int chCurrent) {
     printf("[ERROR] in state '%d', index: %d, token: %c\n", state, idxParser, chCurrent);
     return false;
 }
 
-void JSONDecoderNew::ChangeState(kState newState) {
-    //printf("state change: %d -> %d\n", state, newState);
+
+void JSONDecoder::ChangeState(kState newState) {
+/*
+    static std::unordered_map<kState, std::string> stateToName = {
+            {kConsume, "Consume"},       // 0
+            {kObjectStart, "ObjectStart"},   // 1
+            {kLabel, "Label"},         // 2
+            {kNameValueSep, "NameValueSep"},  // 3
+            {kValueStart,"ValueStart"},    // 4
+            {kValueString,"ValueString"},   // 5
+            {kValue,"Value"},         // 6
+            {kEndOrNext,"EndOrNext"},     // 7
+            {kEndArrayOrNext,"EndArrayOrNext"}     // 8
+    };
+    printf("state change: %s (%d) -> %s (%d), label currently: %s\n", stateToName[state].c_str(), state, stateToName[newState].c_str(), newState, labelCurrent);
+*/
     state = newState;
 }
 
-int JSONDecoderNew::Next() {
+int JSONDecoder::Next() {
     if (!inStream->Available()) {
         return -1;
     }
@@ -269,10 +305,4 @@ int JSONDecoderNew::Next() {
     inStream->Read((uint8_t *)&ch, 1);
     idxParser++;
     return ch;
-}
-int JSONDecoderNew::Peek() {
-    if (!inStream->Available()) {
-        return -1;
-    }
-    return inStream->Peek();
 }

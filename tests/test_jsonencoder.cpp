@@ -1,6 +1,6 @@
-#include "encoding.h"
-#include "jsonencoder.h"
-#include "jsondecoder.h"
+#include "Encoding.h"
+#include "JSONEncoder.h"
+#include "JSONDecoder.h"
 
 #include <string>
 #include "testinterface.h"

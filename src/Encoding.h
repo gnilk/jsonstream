@@ -72,8 +72,6 @@ namespace gnilk {
     public:
         // Should return the number of bytes read or a negative number on error
         virtual int Read(uint8_t *data, size_t szData) = 0;
-        // Returns the next byte available or negative on error
-        virtual int Peek() = 0;
         // Returns true if data is available otherwise false (also if not supported/implemented)
         virtual bool Available() = 0;
     };
