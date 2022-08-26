@@ -1,4 +1,4 @@
-#include "JSONDecoderNew.h"
+#include "JSONDecoder.h"
 #include "Memfile.h"
 #include <string>
 
@@ -7,7 +7,7 @@ using namespace gnilk;
 bool t_jsnew_basic() {
     std::string basic = "{ \"number\" : 10 }";
     Memfile mf(basic);
-    JSONDecoderNew jsNew(&mf,nullptr);
+    JSONDecoder jsNew(&mf,nullptr);
     jsNew.ProcessData();
     return true;
 }
